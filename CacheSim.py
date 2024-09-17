@@ -24,9 +24,11 @@ class Memoria:
 
 
 class RAM(Memoria):
+    # Capacidade da RAM = 4096 = 2**12
+
     def __init__(self, k):
         Memoria.__init__(self, 2**k)
-        self.memoria = [0] * self.tamanho
+        self.memoria = [0][0] * self.tamanho
 
     def read(self, ender):
         self.verifica_endereco(ender)
@@ -62,11 +64,19 @@ class CPU: # Implementado pelo professor
 
 class Cache(Memoria):
 
-    def __init__(self, kc, ram):
+    def __init__(self, total_cache, tam_cache_line, ram):
         Memoria.__init__(self, ram.capacidade())
         self.ram = ram
-        self.cache_sz = 2**kc
-        self.dados = [0] * self.cache_sz
+        #palavra = número inteiro
+        #quantidade de linhas = 128 palavras(0->127)
+        #tamanho de cada linha = 16 palavras
+        # Reservar duas colunas extras, a primeira para a tag e
+        self.dados = []
+        for i in range(total_cache): # Cache por mapeamento direto tem uma tabela, o for cria uma tabela com o tamanho das cache lines
+            linha = []               # + 2 colunas extras, uma pra TAG e outra para o bit que indica se foi modificada ou não.
+            for a in range(tam_cache_line+2):
+                linha.append(0)
+            self.dados.append(linha)
         self.bloco = -1
         self.modif = False
 
