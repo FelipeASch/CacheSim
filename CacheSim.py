@@ -70,12 +70,11 @@ class Cache(Memoria):
         self.totalcapac = total_cache
         self.tamcacheline = tam_cache_line
         #palavra = número inteiro
-        #quantidade de linhas = 128 palavras(0->127)
+        #quantidade de linhas = 8 palavras(0->7)
         #tamanho de cada linha = 16 palavras
-        # Reservar duas colunas extras, a primeira para a tag e
         self.dados = []
         for i in range(int(2**self.totalcapac/2**self.tamcacheline)):
-            linha = [-1,0] # Cache por mapeamento direto tem uma tabela, o for cria uma tabela com o tamanho das cache lines          # + 2 colunas extras, uma pra TAG e outra para o bit que indica se foi modificada ou não.
+            linha = [-1,0]     
             for a in range(2**tam_cache_line):  
                 linha.append(0)
             self.dados.append(linha)
@@ -89,17 +88,15 @@ class Cache(Memoria):
             print("cache hit em um read no endereço:", ender)
         else:
             print("cache miss em um read no endereço:", ender)
-            if self.dados[r][1] == 1:
-                self.ram.memoria[r*16+w] = self.dados[r][w]
             inforam=[0,0]
             inforam[0]=(int(ender/2**self.totalcapac))
             inforam[1]=0
-            for i in range(0,16,1):
-                inforam.append(self.ram.memoria[r*16+i])
+            for i in range(0,2**self.tamcacheline,1):
+                inforam.append(self.ram.memoria[r*2**self.tamcacheline+i])
+            if self.dados[r][1] == 1:
+                self.ram.memoria[t**self.totalcapac+r*2**self.tamcacheline+w] = self.dados[r][w]
             self.dados[r] = inforam
-            
-            
-
+        print(self.dados)
         return self.dados[r][w+2]
 
     def write(self, ender, val):
@@ -108,17 +105,21 @@ class Cache(Memoria):
             print("cache hit em um write no endereço:", ender)
         else:
             print("cache miss em um write no endereço:", ender)
-            if self.dados[r][1] == 1:
-                self.ram.memoria[r*16+w] = self.dados[r][w]
             inforam=[0,0]
             inforam[0]=(ender//2**self.totalcapac)
             inforam[1]=0
-            for i in range(0,16,1):
-                inforam.append(self.ram.memoria[r*16+i])
+            for i in range(0,2**self.tamcacheline,1):
+                inforam.append(self.ram.memoria[r*2**self.tamcacheline+i])
+            if self.dados[r][1] == 1:
+                for i in range(0,16,1):
+                    print([r][0])
+                    self.ram.memoria[self.dados[r][0]*2**self.totalcapac+r*2**self.tamcacheline+i] = self.dados[r][i+2]                  
+            
             self.dados[r] = inforam
         self.dados[r][w+2] = val
         self.dados[r][1] = 1
-        print(self.dados)
+
+        
 
     def cache_hit(self, ender):
     
@@ -127,9 +128,6 @@ class Cache(Memoria):
             return True
         else:
             return False
-        
-        #bloco_ender = int(ender/self.totalcapac)
-        #return bloco_ender == self.bloco
 
     def pegarinfo(self,ender):
         def repeat_ones(x):
@@ -141,8 +139,8 @@ class Cache(Memoria):
         r = (x >> self.tamcacheline) & repeat_ones(self.totalcapac-self.tamcacheline)
         t = x >> (self.tamcacheline + int(self.totalcapac-self.tamcacheline))
         return w,r,t
+    
 try:
-
     io = IO()
     ram = RAM(12)   # 4K de RAM (2**12)
     cache = Cache(7, 4, ram) # total cache = 128 (2**7), cacheline = 16 (2**4)
