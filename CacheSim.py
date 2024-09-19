@@ -35,7 +35,6 @@ class RAM(Memoria):
         return self.memoria[ender]
 
     def write(self, ender, val):
-        print("ender" , ender)
         self.verifica_endereco(ender)
         self.memoria[ender] = val
 
@@ -76,48 +75,72 @@ class Cache(Memoria):
         # Reservar duas colunas extras, a primeira para a tag e
         self.dados = []
         for i in range(int(2**self.totalcapac/2**self.tamcacheline)):
-            linha = [0,0] # Cache por mapeamento direto tem uma tabela, o for cria uma tabela com o tamanho das cache lines          # + 2 colunas extras, uma pra TAG e outra para o bit que indica se foi modificada ou não.
-            for a in range(2**tam_cache_line+2):  
+            linha = [-1,0] # Cache por mapeamento direto tem uma tabela, o for cria uma tabela com o tamanho das cache lines          # + 2 colunas extras, uma pra TAG e outra para o bit que indica se foi modificada ou não.
+            for a in range(2**tam_cache_line):  
                 linha.append(0)
             self.dados.append(linha)
-        print(self.dados)
         self.bloco = -1
         self.modif = False
         
 
     def read(self, ender):
-        if self.cache_hit(ender):
-            print("cache hit:", ender)
+        w,r,t = self.pegarinfo(ender)
+        if self.cache_hit(ender):                                                                                                                                              
+            print("cache hit em um read no endereço:", ender)
         else:
-            print("cache miss:", ender)
-            bloco_ender = int(ender/self.totalcapac)
-            if self.modif:
-                # update ram
-                for i in range(self.totalcapac):
-                    self.ram.write(bloco_ender * self.totalcapac + i, self.dados[i])
-            # update cache
-            for i in range(self.totalcapac):
-                self.dados[i] = self.ram.read(bloco_ender * self.totalcapac + i)
-            self.bloco = bloco_ender
-            self.modif = False
-        return self.dados[ender % self.totalcapac]
+            print("cache miss em um read no endereço:", ender)
+            if self.dados[r][1] == 1:
+                self.ram.memoria[r*16+w] = self.dados[r][w]
+            inforam=[0,0]
+            inforam[0]=(int(ender/2**self.totalcapac))
+            inforam[1]=0
+            for i in range(0,16,1):
+                inforam.append(self.ram.memoria[r*16+i])
+            self.dados[r] = inforam
+            
+            
+
+        return self.dados[r][w+2]
 
     def write(self, ender, val):
+        w,r,t = self.pegarinfo(ender)
         if self.cache_hit(ender):
-            print("cache hit:", ender)
+            print("cache hit em um write no endereço:", ender)
         else:
-            print("cache miss:", ender)
-
-            # complete!
-            # ...
-
-        self.dados[ender % self.totalcapac] = val
-        self.modif = True
+            print("cache miss em um write no endereço:", ender)
+            if self.dados[r][1] == 1:
+                self.ram.memoria[r*16+w] = self.dados[r][w]
+            inforam=[0,0]
+            inforam[0]=(ender//2**self.totalcapac)
+            inforam[1]=0
+            for i in range(0,16,1):
+                inforam.append(self.ram.memoria[r*16+i])
+            self.dados[r] = inforam
+        self.dados[r][w+2] = val
+        self.dados[r][1] = 1
+        print(self.dados)
 
     def cache_hit(self, ender):
-        bloco_ender = int(ender/self.totalcapac)
-        return bloco_ender == self.bloco
+    
+        w,r,t =self.pegarinfo(ender)
+        if self.dados[r][0] == t:
+            return True
+        else:
+            return False
+        
+        #bloco_ender = int(ender/self.totalcapac)
+        #return bloco_ender == self.bloco
 
+    def pegarinfo(self,ender):
+        def repeat_ones(x):
+            if x < 1: raise ValueError("The input must be a positive integer.")
+            binary_str = '1' * int(x)
+            return int(binary_str, 2)
+        x = ender
+        w = x & repeat_ones(self.tamcacheline)
+        r = (x >> self.tamcacheline) & repeat_ones(self.totalcapac-self.tamcacheline)
+        t = x >> (self.tamcacheline + int(self.totalcapac-self.tamcacheline))
+        return w,r,t
 try:
 
     io = IO()
