@@ -96,7 +96,6 @@ class Cache(Memoria):
             if self.dados[r][1] == 1:
                 self.ram.memoria[t**self.totalcapac+r*2**self.tamcacheline+w] = self.dados[r][w]
             self.dados[r] = inforam
-        print(self.dados)
         return self.dados[r][w+2]
 
     def write(self, ender, val):
